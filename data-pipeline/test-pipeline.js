@@ -172,7 +172,7 @@ class PipelineTester {
             console.log(`🌐 API: ${this.apiUrl}`);
             console.log(`🔐 Database Secret: ${this.databaseSecretId}`);
         } else {
-            console.log('\n🔍 To find your database secret, run:');
+            console.log('\n🔍 To find database secret, run:');
             console.log('   aws secretsmanager list-secrets --query "SecretList[?contains(Name, \\`DataPipelineStack\\`)].[Name]" --output table');
         }
     }
