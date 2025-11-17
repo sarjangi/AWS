@@ -1,0 +1,20 @@
+{
+  "DataPipelineStack": {
+    "ExportsOutputRefCanonicalDatabaseSecretAttachment4B31EC9377010A6F": "arn:aws:secretsmanager:us-east-1:897347885635:secret:DataPipelineStackCanonicalD-SjAK1kDzdo55-TUxYvS",
+    "ExportsOutputFnGetAttCanonicalDatabaseB1EE3819EndpointAddress5AC6C27E": "datapipelinestack-canonicaldatabaseb1ee3819-sqj9bt2nqok0.c4fqogo60qix.us-east-1.rds.amazonaws.com",
+    "VpcId": "vpc-026e5d1ee45e4cbe9",
+    "ExportsOutputRefPipelineVPCPrivateSubnet2Subnet5815208A3FE98BB7": "subnet-078eac793c6c3afa9",
+    "DatabaseSecretArn": "arn:aws:secretsmanager:us-east-1:897347885635:secret:DataPipelineStackCanonicalD-SjAK1kDzdo55-TUxYvS",
+    "ExportsOutputFnGetAttRawDataBucket57F26C03Arn307EA583": "arn:aws:s3:::datapipelinestack-rawdatabucket57f26c03-pmq8a0g6z3sm",
+    "ExportsOutputRefPipelineVPCPrivateSubnet1Subnet7B239AC1FF8C986B": "subnet-0d835e9b44c026860",
+    "S3BucketName": "datapipelinestack-rawdatabucket57f26c03-pmq8a0g6z3sm",
+    "ExportsOutputFnGetAttLambdaSecurityGroup0BD9FC99GroupId34A98CFB": "sg-0a56a0538e3820314"
+  },
+  "AnalyticsStack": {
+    "AnalyticsLambdaName": "data-pipeline-advanced-analytics",
+    "AnalyticsResultsBucketName": "analytics-results-897347885635-us-east-1",
+    "AnalyticsTableName": "data-pipeline-analytics-metadata",
+    "AnalyticsApiEndpoint21C542FB": "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/",
+    "AnalyticsApiUrl": "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/"
+  }
+}

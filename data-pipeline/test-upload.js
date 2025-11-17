@@ -44,17 +44,17 @@ async function getBucketNameFromSecrets() {
     try {
         // Try to get bucket name from Secrets Manager
         const command = new GetSecretValueCommand({ 
-            SecretId: 'DataPipelineStackCanonicalD-glZssXwpZ8yp' 
+            SecretId: 'DataPipelineStackCanonicalD-SjAK1kDzdo55'  // ← CORRECT SECRET ID
         });
         const response = await secretsClient.send(command);
         const secret = JSON.parse(response.SecretString);
         
         // The bucket name might be in the secret or we can construct it
         // For now, let's use the known bucket name pattern
-        return 'datapipelinestack-rawdatabucket57f26c03-rx0jutfwlpxv';
+        return 'datapipelinestack-rawdatabucket57f26c03-pmq8a0g6z3sm';
     } catch (error) {
         console.log('❌ Could not get secret, using default bucket name');
-        return 'datapipelinestack-rawdatabucket57f26c03-rx0jutfwlpxv';
+        return 'datapipelinestack-rawdatabucket57f26c03-pmq8a0g6z3sm';
     }
 }
 
@@ -62,7 +62,7 @@ async function testDatabaseConnection() {
     try {
         console.log('🔐 Testing Secrets Manager connection...');
         const command = new GetSecretValueCommand({ 
-            SecretId: 'DataPipelineStackCanonicalD-glZssXwpZ8yp' 
+            SecretId: 'DataPipelineStackCanonicalD-SjAK1kDzdo55'  // ← CORRECT SECRET ID
         });
         const response = await secretsClient.send(command);
         const secret = JSON.parse(response.SecretString);
@@ -71,6 +71,7 @@ async function testDatabaseConnection() {
         console.log('📋 Secret contains:', Object.keys(secret));
         console.log('🌐 Database host:', secret.host);
         console.log('🗃️ Database name:', secret.dbname);
+        console.log('👤 Database user:', secret.username);
         
         return true;
     } catch (error) {

@@ -4,14 +4,18 @@
   "type": "commonjs",
   "scripts": {
     "deploy": "cd infrastructure && cdk deploy",
-    "test": "node test-local.js",
+    "deploy:analytics": "cd infrastructure && cdk deploy AnalyticsStack",
+    "deploy:all": "cd infrastructure && cdk deploy --all",
+    "test": "node test-pipeline.js",
     "start:api": "node src/api/server.js",
     "dev": "node src/api/server.js"
   },
   "dependencies": {
     "@aws-sdk/client-dynamodb": "^3.450.0",
+    "@aws-sdk/client-lambda": "^3.932.0",
     "@aws-sdk/client-s3": "^3.450.0",
     "@aws-sdk/client-secrets-manager": "^3.932.0",
+    "axios": "^1.13.2",
     "express": "^4.18.2",
     "joi": "^17.11.0",
     "pg": "^8.11.3",
