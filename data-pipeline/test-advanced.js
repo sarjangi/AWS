@@ -16,7 +16,7 @@ class PipelineTester {
     constructor() {
         this.testResults = [];
         
-        // Use your actual resource names from the outputs
+        // Use actual resource names from the outputs
         this.bucketName = 'datapipelinestack-rawdatabucket57f26c03-pmq8a0g6z3sm';
         this.databaseSecretId = 'DataPipelineStackCanonicalD-SjAK1kDzdo55-TUxYvS';
         this.analyticsLambdaName = 'data-pipeline-advanced-analytics';
@@ -456,7 +456,7 @@ class PipelineTester {
         console.log(`   📋 DynamoDB Table: ${this.analyticsTableName}`);
         
         if (failedTests === 0) {
-            console.log('\n🎉 ALL TESTS PASSED! Your pipeline is working correctly.');
+            console.log('\n🎉 ALL TESTS PASSED! pipeline is working correctly.');
             console.log('   🚀 Ready for production data processing!');
         } else {
             console.log('\n⚠️  Some tests failed. Check the details below:');
@@ -478,7 +478,7 @@ class PipelineTester {
             console.log('   4. Review S3 event configuration');
         } else {
             console.log('   1. Monitor CloudWatch metrics and alarms');
-            console.log('   2. Consider adding authentication to your API');
+            console.log('   2. Consider adding authentication to API');
             console.log('   3. Set up data backup and retention policies');
             console.log('   4. Implement monitoring and alerting');
         }
@@ -500,7 +500,7 @@ class PipelineTester {
     async runAllTests() {
         console.log('🚀 STARTING COMPREHENSIVE PIPELINE TEST SUITE');
         console.log('='.repeat(70));
-        console.log('Using your actual AWS resources:');
+        console.log('Using actual AWS resources:');
         console.log(`   Account: 897347885635, Region: us-east-1`);
         console.log('='.repeat(70));
 

@@ -21,8 +21,8 @@ const logger = createLogger({
     ]
 });
 
-// Add file transport in production
-if (process.env.NODE_ENV === 'production') {
+// Only add file transport if NOT in Lambda environment
+if (process.env.NODE_ENV === 'production' && !process.env.AWS_EXECUTION_ENV) {
     logger.add(new transports.File({ 
         filename: 'logs/analytics-service-error.log', 
         level: 'error' 

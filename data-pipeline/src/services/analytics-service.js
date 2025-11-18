@@ -10,52 +10,78 @@ class AnalyticsService {
     async executeAnalyticsOperation(operation, parameters = {}) {
         const startTime = Date.now();
         const operationId = `${operation}_${startTime}`;
-        
+
         try {
-            logger.info('Starting analytics operation', { 
-                operation, 
+            logger.info('Starting analytics operation', {
+                operation,
                 parameters,
-                operationId 
+                operationId
             });
 
             let result;
-            
+
             switch (operation) {
+                case 'database_info':
+                    result = await this.queryService.getDatabaseInfo();
+                    break;
                 case 'multi_dimensional_analytics':
                     result = await this.queryService.getMultiDimensionalAnalytics(
                         parameters.timeframe || '3 months'
                     );
                     break;
-                    
+
                 case 'relationship_network':
                     result = await this.queryService.getEntityRelationshipNetwork(
                         parameters.rootEntityId
                     );
                     break;
-                    
+
                 case 'time_series_patterns':
                     result = await this.queryService.getTimeSeriesPatterns(
                         parameters.analysisPeriod || '6 months'
                     );
                     break;
-                    
+
                 case 'data_integrity_analysis':
                     result = await this.queryService.getDataIntegrityAnalysis();
                     break;
-                    
+
+                case 'customer_analysis':
+                    result = await this.queryService.getCustomerAnalysis(
+                        parameters.metric || 'lifetime_value',
+                        parameters.group_by || 'industry'
+                    );
+                    break;
+
+                case 'revenue_analysis':
+                    result = await this.queryService.getRevenueAnalysis(
+                        parameters.metric || 'annual_revenue',
+                        parameters.group_by || 'region'
+                    );
+                    break;
+
+                case 'count_analysis':
+                    result = await this.queryService.getCountAnalysis(
+                        parameters.metric || 'customer_count',
+                        parameters.group_by || 'industry'
+                    );
+                    break;
+
                 case 'custom_complex_query':
                     if (!parameters.query) {
                         throw new Error('Custom query is required for this operation');
                     }
                     result = await this.executeCustomComplexQuery(parameters.query, parameters.params);
                     break;
-                    
+                case 'simple_demo':
+                    result = await this.queryService.getSimpleDemo();
+                    break;
                 default:
                     throw new Error(`Unknown analytics operation: ${operation}`);
             }
 
             const executionTime = Date.now() - startTime;
-            
+
             logger.info('Analytics operation completed', {
                 operation,
                 operationId,
@@ -72,13 +98,13 @@ class AnalyticsService {
                 metadata: {
                     resultCount: result?.length || 0,
                     timestamp: new Date().toISOString(),
-                    cacheHit: false // Could be enhanced with Redis caching
+                    cacheHit: false
                 }
             };
 
         } catch (error) {
             const executionTime = Date.now() - startTime;
-            
+
             logger.error('Analytics operation failed', {
                 operation,
                 operationId,
@@ -105,10 +131,10 @@ class AnalyticsService {
     async executeCustomComplexQuery(query, params = []) {
         // Security validation for custom queries
         this.validateCustomQuery(query);
-        
+
         const pool = await this.queryService.init();
         const result = await pool.query(query, params);
-        
+
         return result.rows;
     }
 
@@ -141,17 +167,17 @@ class AnalyticsService {
 
     getErrorSuggestions(error, operation) {
         const suggestions = [];
-        
+
         if (error.message.includes('timeout')) {
             suggestions.push('Try reducing the analysis timeframe');
             suggestions.push('Consider using smaller data subsets');
         }
-        
+
         if (error.message.includes('memory')) {
             suggestions.push('Try using more specific filters');
             suggestions.push('Consider implementing pagination');
         }
-        
+
         if (error.message.includes('syntax')) {
             suggestions.push('Check query syntax and parameter types');
         }
@@ -173,7 +199,7 @@ class AnalyticsService {
         try {
             const pool = await this.queryService.init();
             const healthCheck = await pool.query('SELECT 1 as status, NOW() as timestamp');
-            
+
             return {
                 status: 'healthy',
                 database: 'connected',
@@ -203,7 +229,7 @@ exports.handler = async (event, context) => {
     });
 
     const analyticsService = new AnalyticsService();
-    
+
     try {
         // Handle different invocation types
         if (event.httpMethod) {
@@ -243,7 +269,7 @@ exports.handler = async (event, context) => {
 
 async function handleApiGatewayEvent(event, analyticsService) {
     const { httpMethod, path, queryStringParameters, body } = event;
-    
+
     logger.info('API Gateway request', { httpMethod, path, queryStringParameters });
 
     // Set security headers
@@ -267,10 +293,10 @@ async function handleApiGatewayEvent(event, analyticsService) {
 
     try {
         let result;
-        
+
         if (httpMethod === 'GET' && path.includes('/health')) {
             result = await analyticsService.getServiceHealth();
-        } 
+        }
         else if (httpMethod === 'POST' && path.includes('/analytics')) {
             const requestBody = JSON.parse(body || '{}');
             result = await analyticsService.executeAnalyticsOperation(
@@ -280,10 +306,10 @@ async function handleApiGatewayEvent(event, analyticsService) {
         }
         else if (httpMethod === 'GET' && path.includes('/analytics')) {
             const operation = queryStringParameters?.operation;
-            const parameters = queryStringParameters?.parameters 
-                ? JSON.parse(queryStringParameters.parameters) 
+            const parameters = queryStringParameters?.parameters
+                ? JSON.parse(queryStringParameters.parameters)
                 : {};
-                
+
             result = await analyticsService.executeAnalyticsOperation(operation, parameters);
         }
         else {
@@ -327,13 +353,13 @@ async function handleDirectInvocation(event, analyticsService) {
     logger.info('Direct Lambda invocation', { event });
 
     const { operation, parameters, requestId } = event;
-    
+
     if (!operation) {
         throw new Error('Operation parameter is required for direct invocation');
     }
 
     const result = await analyticsService.executeAnalyticsOperation(operation, parameters);
-    
+
     // Add request context if available
     if (requestId) {
         result.requestId = requestId;
@@ -360,16 +386,16 @@ async function handleScheduledEvent(event, analyticsService) {
     ];
 
     const results = [];
-    
+
     for (const scheduledOp of scheduledOperations) {
         try {
             logger.info('Executing scheduled operation', scheduledOp);
-            
+
             const result = await analyticsService.executeAnalyticsOperation(
                 scheduledOp.operation,
                 scheduledOp.parameters
             );
-            
+
             results.push({
                 operation: scheduledOp.operation,
                 description: scheduledOp.description,
@@ -380,13 +406,13 @@ async function handleScheduledEvent(event, analyticsService) {
 
             // Add delay between operations to avoid overwhelming the database
             await new Promise(resolve => setTimeout(resolve, 1000));
-            
+
         } catch (error) {
             logger.error('Scheduled operation failed', {
                 operation: scheduledOp.operation,
                 error: error.message
             });
-            
+
             results.push({
                 operation: scheduledOp.operation,
                 description: scheduledOp.description,
