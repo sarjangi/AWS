@@ -31,34 +31,23 @@ SQL queries
 curl "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics?operation=database_info"
 curl "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics?operation=customer_analysis"
 
-Architecture
+#Architecture
 Ingestion: S3 → Lambda (automatic trigger)
-
 Storage: PostgreSQL with canonical schema
-
 Analytics: REST API with window functions, CTEs, JSONB operations
-
 Infrastructure: CDK, Lambda, RDS, API Gateway, DynamoDB
 
-SQL Features
+#SQL Features
 Multi-dimensional analytics with window functions
-
 Recursive CTEs for relationship analysis
-
 JSONB operations and fuzzy matching
-
 Time-series pattern recognition
-
 Cross-system data integrity checks
 
-API Operations
+#API Operations
 database_info - Schema inspection
-
 customer_analysis - Segmentation with HAVING clauses
-
 revenue_analysis - Window functions and rankings
-
 multi_dimensional_analytics - Business intelligence
-
 data_integrity_analysis - Quality scoring
 
