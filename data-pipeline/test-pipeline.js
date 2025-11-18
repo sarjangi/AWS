@@ -23,7 +23,7 @@ class PipelineTester {
 
     async discoverSecretId() {
         try {
-            console.log('\n🔍 Discovering Database Secret...');
+            console.log('\nDiscovering Database Secret...');
             const command = new ListSecretsCommand({});
             const response = await secrets.send(command);
             
@@ -47,7 +47,7 @@ class PipelineTester {
 
     async testS3() {
         try {
-            console.log('\n📦 Testing S3...');
+            console.log('\nTesting S3...');
             await s3.send(new ListObjectsV2Command({ Bucket: this.bucketName, MaxKeys: 1 }));
             await this.log('S3 Access', true, `Bucket: ${this.bucketName}`);
             
@@ -81,7 +81,7 @@ class PipelineTester {
 
     async testSecrets() {
         try {
-            console.log('\n🔐 Testing Secrets Manager...');
+            console.log('\nTesting Secrets Manager...');
             
             // Try to discover secret ID if not already set
             if (!this.databaseSecretId) {
@@ -125,7 +125,7 @@ class PipelineTester {
 
     async testLambda() {
         try {
-            console.log('\n⚡ Testing Lambda Functions...');
+            console.log('\nTesting Lambda Functions...');
             const response = await lambda.send(new ListFunctionsCommand({}));
             
             const dataProcessor = response.Functions.find(f => 
@@ -145,7 +145,7 @@ class PipelineTester {
 
     async testAPI() {
         try {
-            console.log('\n🌐 Testing API Gateway...');
+            console.log('\nTesting API Gateway...');
             const response = await axios.get(`${this.apiUrl}/health`, { timeout: 10000 });
             await this.log('API Health', response.status === 200, `Status: ${response.status}`);
         } catch (error) {
@@ -155,7 +155,7 @@ class PipelineTester {
     }
 
     async run() {
-        console.log('🚀 Testing Data Pipeline Infrastructure...\n');
+        console.log(' Testing Data Pipeline Infrastructure...\n');
         
         await this.testS3();
         await this.testSecrets();
@@ -164,7 +164,7 @@ class PipelineTester {
 
         // Summary
         const passed = this.results.filter(r => r.status === '✅ PASS').length;
-        console.log(`\n📊 ${passed}/${this.results.length} tests passed`);
+        console.log(`\n ${passed}/${this.results.length} tests passed`);
         
         if (passed === this.results.length) {
             console.log('\n🎉 Pipeline is fully operational!');
