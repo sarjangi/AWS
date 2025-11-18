@@ -41,7 +41,7 @@ class PipelineTester {
     // Test 1: Secrets Manager Access
     async testSecretsManager() {
         try {
-            console.log('\n🔐 TEST 1: Secrets Manager Access');
+            console.log('\nTEST 1: Secrets Manager Access');
             const command = new GetSecretValueCommand({ 
                 SecretId: this.databaseSecretId 
             });
@@ -67,7 +67,7 @@ class PipelineTester {
     // Test 2: S3 Bucket Access
     async testS3Bucket() {
         try {
-            console.log('\n📦 TEST 2: S3 Bucket Access');
+            console.log('\nTEST 2: S3 Bucket Access');
             const command = new ListObjectsV2Command({
                 Bucket: this.bucketName,
                 MaxKeys: 10
@@ -91,7 +91,7 @@ class PipelineTester {
 
     // Test 3: Upload Test Data Files
     async uploadTestFiles() {
-        console.log('\n📤 TEST 3: Upload Test Data Files');
+        console.log('\nTEST 3: Upload Test Data Files');
         
         const testFiles = [
             {
@@ -220,11 +220,11 @@ class PipelineTester {
 
     // Test 4: Check Lambda Execution
     async checkLambdaExecution() {
-        console.log('\n⚡ TEST 4: Lambda Execution Monitoring');
+        console.log('\nTEST 4: Lambda Execution Monitoring');
         
         try {
             // Wait for Lambda to process the files
-            console.log('   ⏳ Waiting 30 seconds for Lambda processing...');
+            console.log('  Waiting 30 seconds for Lambda processing...');
             await new Promise(resolve => setTimeout(resolve, 30000));
 
             // Check CloudWatch logs for Data Processor Lambda
@@ -256,7 +256,7 @@ class PipelineTester {
 
     // Test 5: Direct Lambda Invocation (Analytics)
     async testAnalyticsLambda() {
-        console.log('\n📊 TEST 5: Analytics Lambda Direct Invocation');
+        console.log('\nTEST 5: Analytics Lambda Direct Invocation');
         
         try {
             const payload = {
@@ -293,7 +293,7 @@ class PipelineTester {
 
     // Test 6: Database Connectivity Verification
     async testDatabaseConnectivity() {
-        console.log('\n🗄️ TEST 6: Database Connectivity');
+        console.log('\nTEST 6: Database Connectivity');
         
         try {
             // Get database credentials to verify they're accessible
@@ -322,7 +322,7 @@ class PipelineTester {
 
     // Test 7: DynamoDB Analytics Table
     async testDynamoDBTable() {
-        console.log('\n📋 TEST 7: DynamoDB Analytics Table');
+        console.log('\nTEST 7: DynamoDB Analytics Table');
         
         try {
             const command = new ScanCommand({
@@ -347,9 +347,9 @@ class PipelineTester {
         }
     }
 
-    // Test 8: Comprehensive Analytics API Test
+    // Test 8:  Analytics API Test
     async testAnalyticsAPI() {
-        console.log('\n🌐 TEST 8: Analytics API Endpoints');
+        console.log('\nTEST 8: Analytics API Endpoints');
         
         try {
             // Test Health Endpoint
@@ -397,7 +397,7 @@ class PipelineTester {
 
     // Test 9: Verify S3 Event Trigger
     async verifyS3EventTrigger() {
-        console.log('\n🔄 TEST 9: S3 Event Trigger Verification');
+        console.log('\nTEST 9: S3 Event Trigger Verification');
         
         try {
             // Upload a small test file to verify the trigger works
@@ -435,17 +435,17 @@ class PipelineTester {
         }
     }
 
-    // Generate comprehensive test report
+    // Generate  test report
     generateReport() {
         console.log('\n' + '='.repeat(70));
-        console.log('📊 COMPREHENSIVE DATA PIPELINE TEST REPORT');
+        console.log('DATA PIPELINE TEST REPORT');
         console.log('='.repeat(70));
         
         const totalTests = this.testResults.length;
         const passedTests = this.testResults.filter(r => r.status === '✅ PASS').length;
         const failedTests = totalTests - passedTests;
         
-        console.log(`\n📈 Summary: ${passedTests}/${totalTests} tests passed`);
+        console.log(`\nSummary: ${passedTests}/${totalTests} tests passed`);
         
         // Show resource overview
         console.log('\n🏗️  Resource Overview:');
@@ -456,21 +456,21 @@ class PipelineTester {
         console.log(`   📋 DynamoDB Table: ${this.analyticsTableName}`);
         
         if (failedTests === 0) {
-            console.log('\n🎉 ALL TESTS PASSED! pipeline is working correctly.');
-            console.log('   🚀 Ready for production data processing!');
+            console.log('\nALL TESTS PASSED! pipeline is working correctly.');
+            console.log('   Ready for production data processing!');
         } else {
-            console.log('\n⚠️  Some tests failed. Check the details below:');
+            console.log('\nSome tests failed. Check the details below:');
         }
         
-        console.log('\n📋 Detailed Results:');
+        console.log('\nDetailed Results:');
         this.testResults.forEach(result => {
             console.log(`   ${result.status} - ${result.test}`);
             if (result.details) {
-                console.log(`        📝 ${result.details}`);
+                console.log(`         ${result.details}`);
             }
         });
 
-        console.log('\n🎯 Next Steps:');
+        console.log('\nNext Steps:');
         if (failedTests > 0) {
             console.log('   1. Check CloudWatch logs for Lambda functions');
             console.log('   2. Verify IAM permissions and security groups');
@@ -498,7 +498,7 @@ class PipelineTester {
 
     // Run all tests
     async runAllTests() {
-        console.log('🚀 STARTING COMPREHENSIVE PIPELINE TEST SUITE');
+        console.log('STARTING PIPELINE TEST SUITE');
         console.log('='.repeat(70));
         console.log('Using actual AWS resources:');
         console.log(`   Account: 897347885635, Region: us-east-1`);
