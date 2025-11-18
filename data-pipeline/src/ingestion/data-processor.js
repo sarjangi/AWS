@@ -19,7 +19,7 @@ class DatabaseService {
             });
             const response = await secretsClient.send(command);
             this.secret = JSON.parse(response.SecretString);
-            console.log('🔐 Secrets Manager: Got database credentials');
+            console.log('Secrets Manager: Got database credentials');
         }
         return this.secret;
     }
@@ -60,17 +60,17 @@ class DatabaseService {
         `;
         
         await pool.query(createTableSQL);
-        console.log('✅ Ensured entities table exists');
+        console.log('Ensured entities table exists');
     }
 
     async bulkInsertEntities(entities) {
         const pool = await this.init();
         
         try {
-            console.log(`💾 Testing database connection`);
+            console.log(`Testing database connection`);
             
             const testResult = await pool.query('SELECT NOW() as current_time');
-            console.log('✅ Database connection successful!');
+            console.log('Database connection successful!');
             
             await this.ensureTablesExist(pool);
             
@@ -102,7 +102,7 @@ class DatabaseService {
                 }
                 
                 await client.query('COMMIT');
-                console.log(`🎯 SUCCESS: Inserted/Updated ${insertedCount} entities`);
+                console.log(`SUCCESS: Inserted/Updated ${insertedCount} entities`);
                 
                 return { 
                     success: true, 
@@ -152,12 +152,12 @@ class SimpleMapper {
 }
 
 exports.handler = async (event) => {
-    console.log('🚀 Lambda invoked with event:', JSON.stringify(event));
+    console.log('Lambda invoked with event:', JSON.stringify(event));
     
     try {
         // NEW: Handle custom queries - CHECK THIS FIRST
         if (event.query) {
-            console.log('🔍 Running custom query:', event.query);
+            console.log(' Running custom query:', event.query);
             const db = new DatabaseService();
             const pool = await db.init();
             const result = await pool.query(event.query);
@@ -175,15 +175,15 @@ exports.handler = async (event) => {
         
         // Manual test mode (empty payload)
         if (!event.Records || event.Records.length === 0) {
-            console.log('🔍 Manual test - running database queries');
+            console.log('Manual test - running database queries');
             const db = new DatabaseService();
             const pool = await db.init();
             
             const count = await pool.query('SELECT COUNT(*) as total FROM entities');
-            console.log(`📊 Total entities: ${count.rows[0].total}`);
+            console.log(`Total entities: ${count.rows[0].total}`);
             
             const entities = await pool.query('SELECT * FROM entities ORDER BY created_at DESC LIMIT 5');
-            console.log('🔍 Latest entities:', entities.rows);
+            console.log('Latest entities:', entities.rows);
             
             return {
                 statusCode: 200,
@@ -201,14 +201,14 @@ exports.handler = async (event) => {
         const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
         const sourceSystem = key.includes('crm') ? 'crm' : 'erp';
         
-        console.log(`📁 Processing: ${key} from ${sourceSystem}`);
+        console.log(`Processing: ${key} from ${sourceSystem}`);
         
         const command = new GetObjectCommand({ Bucket: bucket, Key: key });
         const response = await s3.send(command);
         const fileContent = await response.Body.transformToString();
         const data = JSON.parse(fileContent);
         
-        console.log(`📄 Found ${data.records.length} records`);
+        console.log(`Found ${data.records.length} records`);
         
         const mapper = new SimpleMapper();
         const entities = data.records.map(record => 
@@ -219,9 +219,9 @@ exports.handler = async (event) => {
         const result = await db.bulkInsertEntities(entities);
         
         if (result.connected && result.inserted) {
-            console.log('🎉 COMPLETE SUCCESS: Database connected AND data inserted!');
+            console.log('COMPLETE SUCCESS: Database connected AND data inserted!');
         } else {
-            console.log('⚠️ Partial success - check details above');
+            console.log('Partial success - check details above');
         }
         
         return {
