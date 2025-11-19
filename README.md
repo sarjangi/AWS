@@ -1,6 +1,9 @@
 AWS Serverless Data Pipeline
 
-A serverless data pipeline processing structured data into PostgreSQL with advanced SQL analytics API.
+This serverless data pipeline It automatically processes structured data from multiple sources into a PostgreSQL schema, then provides advanced analytics through a REST API.
+Data enters through S3 uploads - when JSON files are uploaded, it automatically triggers a Lambda function that validates, transforms, and loads the data into PostgreSQL. This gives us a unified view of all our business entities.
+The Analytics API lets users run complex SQL queries through simple REST calls. It uses DynamoDB for caching frequent queries and can handle advanced operations like multi-dimensional analytics and data integrity checks.
+It's fully serverless so it scales automatically, implements proper security with VPC isolation and Secrets Manager.
 
 Prerequisites
 - AWS CLI configured

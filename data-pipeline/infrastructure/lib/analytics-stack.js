@@ -279,7 +279,7 @@ class AnalyticsStack extends cdk.Stack {
             }),
         }));
 
-        // Monthly comprehensive analytics
+        // Monthly  analytics
         const monthlyAnalyticsRule = new events.Rule(this, 'MonthlyAnalyticsRule', {
             ruleName: 'monthly-comprehensive-analytics',
             schedule: events.Schedule.cron({

@@ -3,20 +3,14 @@
   "version": "1.0.0",
   "scripts": {
     "deploy:pipeline": "cdk deploy DataPipelineStack",
-    "deploy:analytics": "cdk deploy AnalyticsStack",
+    "deploy:analytics": "cdk deploy AnalyticsStack", 
     "deploy:all": "cdk deploy --all",
     "synth": "cdk synth",
     "diff": "cdk diff",
     "destroy": "cdk destroy --all"
   },
   "dependencies": {
-    "@aws-sdk/client-cloudwatch-logs": "^3.932.0",
-    "@aws-sdk/client-dynamodb": "^3.932.0",
-    "@aws-sdk/client-lambda": "^3.932.0",
-    "@aws-sdk/client-s3": "^3.932.0",
-    "@aws-sdk/client-secrets-manager": "^3.932.0",
     "aws-cdk-lib": "2.93.0",
-    "axios": "^1.13.2",
     "constructs": "^10.0.0"
   },
   "devDependencies": {
