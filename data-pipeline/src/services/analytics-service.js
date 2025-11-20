@@ -1,10 +1,94 @@
 const { AdvancedQueryService } = require('../analytics/advanced-queries.js');
+const { S3Client, GetObjectCommand, PutObjectCommand } = require('@aws-sdk/client-s3');
 const logger = require('../shared/logger.js');
 
 class AnalyticsService {
     constructor() {
         this.queryService = new AdvancedQueryService();
         this.operationTimeouts = new Map();
+        this.s3 = new S3Client();
+        this.s3Bucket = process.env.RESULTS_BUCKET;
+    }
+
+    async handleS3Download(event) {
+        try {
+            const key = event.pathParameters?.key;
+            if (!key) {
+                throw new Error('Download key is required');
+            }
+
+            const command = new GetObjectCommand({
+                Bucket: this.s3Bucket,
+                Key: `results/${key}`
+            });
+
+            const response = await this.s3.send(command);
+            const resultData = JSON.parse(await response.Body.transformToString());
+
+            return {
+                statusCode: 200,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                body: JSON.stringify({
+                    success: true,
+                    data: resultData.data,
+                    metadata: {
+                        operation: resultData.operation,
+                        generatedAt: resultData.generatedAt,
+                        recordCount: resultData.recordCount,
+                        source: 's3'
+                    }
+                })
+            };
+
+        } catch (error) {
+            return {
+                statusCode: 404,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({
+                    success: false,
+                    error: 'Result not found or expired',
+                    message: error.message
+                })
+            };
+        }
+    }
+
+    async saveLargeResultToS3(result, operation, startTime) {
+        const s3Key = `results/${operation}-${Date.now()}.json`;
+        const resultData = {
+            operation,
+            data: result,
+            generatedAt: new Date().toISOString(),
+            recordCount: result.length
+        };
+
+        await this.s3.send(new PutObjectCommand({
+            Bucket: this.s3Bucket,
+            Key: s3Key,
+            Body: JSON.stringify(resultData, null, 2),
+            ContentType: 'application/json'
+        }));
+
+        const executionTime = Date.now() - startTime;
+        
+        return {
+            success: true,
+            operation,
+            executionTime: `${executionTime}ms`,
+            largeResult: true,
+            s3Url: `s3://${this.s3Bucket}/${s3Key}`,
+            downloadUrl: `/download/${s3Key.split('/').pop()}`,
+            recordCount: result.length,
+            message: 'Large result saved to S3 for download',
+            metadata: {
+                resultCount: result.length,
+                timestamp: new Date().toISOString(),
+                cacheHit: false
+            }
+        };
     }
 
     async executeAnalyticsOperation(operation, parameters = {}) {
@@ -80,6 +164,11 @@ class AnalyticsService {
                     throw new Error(`Unknown analytics operation: ${operation}`);
             }
 
+            // Check if result is large and save to S3
+            if (result.length > 1000 || JSON.stringify(result).length > 5000000) {
+                return await this.saveLargeResultToS3(result, operation, startTime);
+            }
+
             const executionTime = Date.now() - startTime;
 
             logger.info('Analytics operation completed', {
@@ -129,7 +218,6 @@ class AnalyticsService {
     }
 
     async executeCustomComplexQuery(query, params = []) {
-        // Security validation for custom queries
         this.validateCustomQuery(query);
 
         const pool = await this.queryService.init();
@@ -139,7 +227,6 @@ class AnalyticsService {
     }
 
     validateCustomQuery(query) {
-        // Basic security checks - in production, use a proper query validator
         const forbiddenPatterns = [
             /DROP\s+/i,
             /DELETE\s+FROM/i,
@@ -158,7 +245,6 @@ class AnalyticsService {
             }
         }
 
-        // Limit query complexity (simple heuristic)
         const queryLength = query.length;
         if (queryLength > 10000) {
             throw new Error('Query too complex. Maximum length exceeded.');
@@ -182,7 +268,6 @@ class AnalyticsService {
             suggestions.push('Check query syntax and parameter types');
         }
 
-        // Operation-specific suggestions
         switch (operation) {
             case 'relationship_network':
                 suggestions.push('Try specifying a rootEntityId to limit the graph traversal');
@@ -221,7 +306,6 @@ class AnalyticsService {
     }
 }
 
-// Lambda handler with comprehensive error handling and logging
 exports.handler = async (event, context) => {
     logger.info('Analytics Lambda invoked', {
         event: JSON.stringify(event),
@@ -231,15 +315,11 @@ exports.handler = async (event, context) => {
     const analyticsService = new AnalyticsService();
 
     try {
-        // Handle different invocation types
         if (event.httpMethod) {
-            // API Gateway invocation
             return await handleApiGatewayEvent(event, analyticsService);
         } else if (event.operation) {
-            // Direct Lambda invocation
             return await handleDirectInvocation(event, analyticsService);
         } else if (event.source === 'aws.events') {
-            // CloudWatch Events invocation
             return await handleScheduledEvent(event, analyticsService);
         } else {
             throw new Error('Unknown invocation type');
@@ -272,7 +352,6 @@ async function handleApiGatewayEvent(event, analyticsService) {
 
     logger.info('API Gateway request', { httpMethod, path, queryStringParameters });
 
-    // Set security headers
     const headers = {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
@@ -282,13 +361,17 @@ async function handleApiGatewayEvent(event, analyticsService) {
         'X-Frame-Options': 'DENY'
     };
 
-    // Handle preflight requests
     if (httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
             headers,
             body: ''
         };
+    }
+
+    // FIXED: Call handleS3Download on analyticsService instance
+    if (httpMethod === 'GET' && path.includes('/download/')) {
+        return await analyticsService.handleS3Download(event);
     }
 
     try {
@@ -322,7 +405,8 @@ async function handleApiGatewayEvent(event, analyticsService) {
                     availableEndpoints: [
                         'GET /health',
                         'POST /analytics',
-                        'GET /analytics?operation=<operation>&parameters=<json>'
+                        'GET /analytics?operation=<operation>&parameters=<json>',
+                        'GET /download/{key}'
                     ]
                 })
             };
@@ -360,7 +444,6 @@ async function handleDirectInvocation(event, analyticsService) {
 
     const result = await analyticsService.executeAnalyticsOperation(operation, parameters);
 
-    // Add request context if available
     if (requestId) {
         result.requestId = requestId;
     }
@@ -371,7 +454,6 @@ async function handleDirectInvocation(event, analyticsService) {
 async function handleScheduledEvent(event, analyticsService) {
     logger.info('Scheduled event received', { event });
 
-    // Pre-defined scheduled analytics operations
     const scheduledOperations = [
         {
             operation: 'multi_dimensional_analytics',
@@ -404,7 +486,6 @@ async function handleScheduledEvent(event, analyticsService) {
                 resultCount: result.data?.length || 0
             });
 
-            // Add delay between operations to avoid overwhelming the database
             await new Promise(resolve => setTimeout(resolve, 1000));
 
         } catch (error) {
@@ -434,5 +515,4 @@ async function handleScheduledEvent(event, analyticsService) {
     };
 }
 
-// Export for testing and local development
 exports.AnalyticsService = AnalyticsService;
