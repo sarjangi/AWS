@@ -9,9 +9,6 @@ const iam = require('aws-cdk-lib/aws-iam');
 const s3 = require('aws-cdk-lib/aws-s3');
 const ec2 = require('aws-cdk-lib/aws-ec2');
 const cloudwatch = require('aws-cdk-lib/aws-cloudwatch');
-const sns = require('aws-cdk-lib/aws-sns');
-const actions = require('aws-cdk-lib/aws-cloudwatch-actions');
-
 
 class AnalyticsStack extends cdk.Stack {
     constructor(scope, id, props) {
@@ -329,7 +326,9 @@ class AnalyticsStack extends cdk.Stack {
             evaluationPeriods: 1,
             comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
         });
-
+        this.analyticsLambda = analyticsLambda;
+        this.analyticsTable = analyticsTable; 
+        this.analyticsResultsBucket = analyticsResultsBucket;
         // Outputs
         new cdk.CfnOutput(this, 'AnalyticsApiUrl', {
             value: analyticsApi.url,
@@ -355,6 +354,8 @@ class AnalyticsStack extends cdk.Stack {
         cdk.Tags.of(this).add('Service', 'AdvancedAnalytics');
         cdk.Tags.of(this).add('Environment', 'Production');
         cdk.Tags.of(this).add('DataClassification', 'Internal');
+
+
     }
 }
 

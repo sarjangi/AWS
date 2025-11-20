@@ -20,11 +20,24 @@ class MonitoringStack extends cdk.Stack {
             displayName: 'Data Pipeline Alerts'
         });
 
-        // Subscribe email to SNS topic
-        new sns.Subscription(this, 'EmailSubscription', {
+        // Create dedicated topic for job notifications
+        const jobNotificationsTopic = new sns.Topic(this, 'JobNotificationsTopic', {
+            topicName: 'data-pipeline-job-notifications',
+            displayName: 'Data Pipeline Job Notifications'
+        });
+
+        // Subscribe email to alarm topic
+        new sns.Subscription(this, 'AlarmEmailSubscription', {
             topic: alarmTopic,
             protocol: sns.SubscriptionProtocol.EMAIL,
-            endpoint: 'sara.arjangi@gmail.com' // ← REPLACE
+            endpoint: 'sara.arjangi@gmail.com' // ← REPLACE with your email
+        });
+
+        // Subscribe email to job notifications topic
+        new sns.Subscription(this, 'JobEmailSubscription', {
+            topic: jobNotificationsTopic,
+            protocol: sns.SubscriptionProtocol.EMAIL,
+            endpoint: 'sara.arjangi@gmail.com' // ← REPLACE with your email
         });
 
         // Only create alarms for Lambdas that exist
@@ -41,6 +54,26 @@ class MonitoringStack extends cdk.Stack {
         } else {
             console.log('No Analytics Lambda provided');
         }
+
+        // EXPORT TOPICS FOR OTHER STACKS
+        this.alarmTopic = alarmTopic;
+        this.jobNotificationsTopic = jobNotificationsTopic; // FIXED: variable now exists
+
+        // Output the topic ARNs for reference
+        new cdk.CfnOutput(this, 'AlarmTopicArn', {
+            value: alarmTopic.topicArn,
+            description: 'SNS Topic ARN for pipeline alarms'
+        });
+
+        new cdk.CfnOutput(this, 'JobNotificationsTopicArn', {
+            value: jobNotificationsTopic.topicArn,
+            description: 'SNS Topic ARN for job notifications'
+        });
+
+        console.log('MonitoringStack completed - Topics exported:', {
+            alarmTopic: alarmTopic.topicArn,
+            jobNotificationsTopic: jobNotificationsTopic.topicArn
+        });
     }
 
     createLambdaAlarms(serviceName, lambdaFunction, alarmTopic) {
@@ -77,10 +110,25 @@ class MonitoringStack extends cdk.Stack {
             comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
         });
 
-        // Add alert actions
-        [errorAlarm, throttleAlarm].forEach(alarm => {
-            alarm.addAlarmAction(new actions.SnsAction(alarmTopic));
-            alarm.addOkAction(new actions.SnsAction(alarmTopic));
+        // Duration alarm (optional - for long-running jobs)
+        const durationAlarm = new cloudwatch.Alarm(this, `${serviceName}DurationAlarm`, {
+            alarmName: `${serviceName}-LongExecution`,
+            alarmDescription: `Long execution time in ${serviceName} Lambda`,
+            metric: lambdaFunction.metricDuration({
+                period: cdk.Duration.minutes(5),
+                statistic: 'Average',
+            }),
+            threshold: 300000, // 5 minutes in milliseconds
+            evaluationPeriods: 2,
+            comparisonOperator: cloudwatch.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        });
+
+        // Add alert actions to all alarms
+        [errorAlarm, throttleAlarm, durationAlarm].forEach(alarm => {
+            if (alarm) {
+                alarm.addAlarmAction(new actions.SnsAction(alarmTopic));
+                alarm.addOkAction(new actions.SnsAction(alarmTopic));
+            }
         });
 
         console.log(`Created alarms for ${serviceName}`);
