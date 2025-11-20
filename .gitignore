@@ -40,3 +40,4 @@ Thumbs.db
 infrastructure/cdk.out/
 lambda-layer/nodejs/node_modules/
 node_modules/
+cdk.out/
