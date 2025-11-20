@@ -9,7 +9,30 @@ class AnalyticsService {
         this.s3 = new S3Client();
         this.s3Bucket = process.env.RESULTS_BUCKET;
     }
+    // step Functions 
+    async submitAnalyticsJob(operation, parameters) {
+        const jobService = new JobService();
+        const jobId = await jobService.createJob(operation, parameters);
+        
+        return {
+            jobId: jobId,
+            status: 'submitted', 
+            message: 'Job submitted to Step Functions workflow',
+            checkStatusUrl: `/analytics/jobs/${jobId}`,
+            submittedAt: new Date().toISOString()
+        };
+    }
 
+    // Special handler for Step Functions
+    async executeForStepFunctions(operation, parameters) {
+        // Simplified - just run the query, let Step Functions handle retries
+        const result = await this.executeAnalyticsOperation(operation, parameters);
+        return {
+            success: true,
+            data: result.data,
+            metadata: result.metadata
+        };
+    }
     async handleS3Download(event) {
         try {
             const key = event.pathParameters?.key;
@@ -513,6 +536,8 @@ async function handleScheduledEvent(event, analyticsService) {
             failed: results.filter(r => !r.success).length
         }
     };
+
+
 }
 
 exports.AnalyticsService = AnalyticsService;
