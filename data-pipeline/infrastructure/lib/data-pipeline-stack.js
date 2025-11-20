@@ -4,7 +4,6 @@ const s3 = require('aws-cdk-lib/aws-s3');
 const s3n = require('aws-cdk-lib/aws-s3-notifications');
 const rds = require('aws-cdk-lib/aws-rds');
 const ec2 = require('aws-cdk-lib/aws-ec2');
-const secretsmanager = require('aws-cdk-lib/aws-secretsmanager');
 
 class DataPipelineStack extends cdk.Stack {
     constructor(scope, id, props) {
@@ -76,7 +75,7 @@ class DataPipelineStack extends cdk.Stack {
             new s3n.LambdaDestination(dataProcessor)
         );
 
-        // EXPORT RESOURCES FOR OTHER STACKS - THIS IS THE KEY FIX
+        // EXPORT RESOURCES FOR OTHER STACKS
         this.vpc = vpc;
         this.database = database;
         this.rawDataBucket = rawDataBucket;
@@ -94,6 +93,7 @@ class DataPipelineStack extends cdk.Stack {
         new cdk.CfnOutput(this, 'VpcId', {
             value: vpc.vpcId,
         });
+        this.dataProcessor = dataProcessor;
     }
 }
 
