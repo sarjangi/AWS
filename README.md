@@ -11,12 +11,70 @@ Prerequisites
 - AWS CDK installed (`npm install -g aws-cdk`)
 
 Built With
-
-- **AWS CDK** - Infrastructure as Code
-- **Node.js** - Lambda runtime
-- **PostgreSQL** - Primary data store
-- **DynamoDB** - Analytics caching
-- **API Gateway** - REST API layer
+AWS CDK - Infrastructure as Code
+Node.js - Lambda runtime
+PostgreSQL - Primary data store
+DynamoDB - Job tracking & caching
+API Gateway - REST API layer
+Step Functions - Workflow orchestration
+SNS - Notifications
+Architecture
+Data Ingestion Layer
+The pipeline begins with automated data ingestion through S3. When JSON files are uploaded to the raw data bucket, S3 events automatically trigger the Data Processor Lambda function. This function validates incoming data, applies transformation logic to map source-specific formats to a canonical schema, and loads the processed entities into PostgreSQL RDS. The ingestion process supports multiple source systems (CRM, ERP, etc.) and maintains data consistency through upsert operations.
+Data Storage Layer
+PostgreSQL RDS serves as the primary data store with a carefully designed canonical schema that unifies business entities from multiple source systems. The schema supports:
+JSONB columns for flexible attribute storage
+Automatic timestamp tracking for auditing
+Version control for entity updates
+Efficient indexing for analytical queries
+DynamoDB complements the relational storage by handling:
+Job metadata and status tracking for asynchronous operations
+Query result caching for frequently accessed analytics
+Time-to-live (TTL) automatic cleanup of temporary data
+Analytics Processing Layer
+The system provides two execution models for analytics operations:
+Synchronous Processing
+For simple queries and quick results, the Analytics Lambda handles requests directly through API Gateway. This path is optimized for operations with predictable execution times and smaller result sets, providing immediate responses to clients.
+Asynchronous Processing via Step Functions
+Complex, long-running analytics operations are orchestrated through AWS Step Functions, which provides:
+Workflow Orchestration: Coordinates multiple Lambda functions in a defined sequence
+Automatic Retries: Handles transient failures with exponential backoff
+State Management: Maintains execution context across distributed components
+Error Handling: Graceful failure recovery and comprehensive logging
+The Step Functions workflow follows this execution pattern:
+Job initialization and status tracking in DynamoDB
+Analytics query execution against PostgreSQL
+Intelligent result handling with automatic S3 storage for large datasets
+Completion status updates and notification delivery
+API Layer
+API Gateway provides a unified REST interface that routes requests to appropriate processing paths:
+Health checks and simple queries go directly to Analytics Lambda
+Complex analytics operations are routed to Step Functions workflows
+Job status inquiries query DynamoDB directly
+Large result downloads are served from S3
+The API implements proper CORS headers, request validation, and standardized error responses across all endpoints.
+Notification System
+Amazon SNS provides event-driven notifications for:
+Job completion alerts
+System error reporting
+Performance monitoring alerts
+Email subscriptions ensure stakeholders receive timely updates about analytics job status and system health.
+Security & Infrastructure
+The architecture implements defense-in-depth security:
+VPC isolation for database resources
+Secrets Manager for credential rotation
+IAM roles with least-privilege permissions
+Security groups controlling network access
+API Gateway with request validation and throttling
+All components are deployed via AWS CDK with infrastructure-as-code principles, ensuring consistent, repeatable deployments across environments.
+Monitoring & Observability
+CloudWatch provides comprehensive monitoring:
+Lambda function metrics and logs
+Step Functions execution history
+RDS performance monitoring
+Custom business metrics
+SNS-integrated alarms notify administrators of system issues, while detailed logging supports debugging and audit requirements.
+This serverless architecture provides automatic scaling, high availability, and cost-efficient operation while maintaining robust data processing capabilities and enterprise-grade security.
 
 Demo Instructions
 
@@ -33,6 +91,125 @@ curl https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/health
 SQL queries
 curl "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics?operation=database_info"
 curl "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics?operation=customer_analysis"
+
+4. Test Step Functions Jobs (Asynchronous)
+# Submit analytics job
+bash
+curl -X POST https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "multi_dimensional_analytics",
+    "parameters": {
+      "timeframe": "3 months"
+    }
+  }'
+
+# Check job status (replace {jobId})
+curl -X GET https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics/jobs/{jobId}
+
+Powershell
+$apiUrl = "https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod"
+
+# Test health endpoint
+Invoke-RestMethod -Uri "$apiUrl/health" -Method GET
+
+# Test synchronous analytics
+Invoke-RestMethod -Uri "$apiUrl/analytics?operation=simple_demo" -Method GET
+Invoke-RestMethod -Uri "$apiUrl/analytics?operation=database_info" -Method GET
+
+# Submit async job
+$jobBody = @{
+    operation = "multi_dimensional_analytics"
+    parameters = @{
+        timeframe = "6 months"
+    }
+} | ConvertTo-Json
+
+$jobResponse = Invoke-RestMethod -Uri "$apiUrl/analytics/jobs" -Method POST -Body $jobBody -ContentType "application/json"
+Write-Host "Job submitted:" ($jobResponse | ConvertTo-Json -Depth 3)
+
+# Check job status
+$jobId = $jobResponse.jobId
+Start-Sleep -Seconds 30  # Wait for processing
+$statusResponse = Invoke-RestMethod -Uri "$apiUrl/analytics/jobs/$jobId" -Method GET
+Write-Host "Job status:" ($statusResponse | ConvertTo-Json -Depth 3)
+
+5. Test Large Result Handling
+# This may trigger S3 storage for results >1000 records
+curl -X POST https://9z4ap6wa7d.execute-api.us-east-1.amazonaws.com/prod/analytics/jobs \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operation": "customer_analysis", 
+    "parameters": {
+      "metric": "lifetime_value",
+      "group_by": "industry"
+    }
+  }'
+
+6. Monitor Step Functions
+# List recent executions
+aws stepfunctions list-executions \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:data-pipeline-analytics-job
+
+# Get execution details
+aws stepfunctions describe-execution \
+  --execution-arn arn:aws:states:us-east-1:123456789012:execution:data-pipeline-analytics-job:job_123456789
+
+ 7. Check Notifications
+# List recent executions
+aws stepfunctions list-executions \
+  --state-machine-arn arn:aws:states:us-east-1:123456789012:stateMachine:data-pipeline-analytics-job
+
+# Get execution details
+aws stepfunctions describe-execution \
+  --execution-arn arn:aws:states:us-east-1:123456789012:execution:data-pipeline-analytics-job:job_123456789
+
+Error Handling & Testing
+# Invalid operation
+$body = @{
+    operation = "invalid_operation"
+} | ConvertTo-Json
+
+try {
+    $response = Invoke-RestMethod -Uri "$apiUrl/analytics" -Method POST -Body $body -ContentType "application/json"
+} catch {
+    Write-Host "Error handling works:" $_.Exception.Message
+}
+
+# Test database errors
+$body = @{
+    operation = "custom_complex_query"
+    parameters = @{
+        query = "SELECT * FROM non_existent_table"
+    }
+} | ConvertTo-Json
+
+try {
+    $response = Invoke-RestMethod -Uri "$apiUrl/analytics" -Method POST -Body $body -ContentType "application/json"
+} catch {
+    Write-Host "Database error handled:" $_.Exception.Message
+}
+
+Monitor System Health
+# Check Lambda metrics
+aws cloudwatch get-metric-statistics \
+    --namespace AWS/Lambda \
+    --metric-name Errors \
+    --dimensions Name=FunctionName,Value=data-pipeline-advanced-analytics \
+    --start-time 2024-01-01T00:00:00Z \
+    --end-time 2024-01-01T01:00:00Z \
+    --period 300 \
+    --statistics Sum
+
+# Check Step Functions metrics
+aws cloudwatch get-metric-statistics \
+    --namespace AWS/States \
+    --metric-name ExecutionsFailed \
+    --dimensions Name=StateMachineArn,Value=arn:aws:states:us-east-1:123456789012:stateMachine:data-pipeline-analytics-job \
+    --start-time 2024-01-01T00:00:00Z \
+    --end-time 2024-01-01T01:00:00Z \
+    --period 300 \
+    --statistics Sum
 
 #Architecture
 Ingestion: S3 → Lambda (automatic trigger)
@@ -165,66 +342,5 @@ aws cloudwatch get-metric-statistics `
 
 # Check if alarms triggered
 aws cloudwatch describe-alarms --alarm-name-prefix "Analytics"
-Response:
-aws cloudwatch describe-alarms --alarm-name-prefix "Analytics"
-{
-    "MetricAlarms": [
-        {
-            "AlarmName": "AnalyticsService-HighErrorRate",
-            "AlarmArn": "arn:aws:cloudwatch:us-east-1:897347885635:alarm:AnalyticsService-HighErrorRate",
-            "AlarmDescription": "High error rate in Analytics Lambda",
-            "AlarmConfigurationUpdatedTimestamp": "2025-11-17T06:01:19.373000+00:00",
-            "ActionsEnabled": true,
-            "OKActions": [],
-            "AlarmActions": [],
-            "InsufficientDataActions": [],
-            "StateValue": "OK",
-            "StateReason": "Threshold Crossed: 1 datapoint [0.0 (20/11/25 02:31:00)] was not greater than the threshold (5.0).",
-            "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2025-11-20T02:36:09.521+0000\",\"startDate\":\"2025-11-20T02:31:00.000+0000\",\"statistic\":\"Average\",\"period\":300,\"recentDatapoints\":[0.0],\"threshold\":5.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2025-11-20T02:31:00.000+0000\",\"sampleCount\":1.0,\"value\":0.0}]}",
-            "StateUpdatedTimestamp": "2025-11-20T02:36:09.524000+00:00",
-            "MetricName": "Errors",
-            "Namespace": "AWS/Lambda",
-            "Statistic": "Average",
-            "Dimensions": [
-                {
-                    "Name": "FunctionName",
-                    "Value": "data-pipeline-advanced-analytics"
-                }
-            ],
-            "Period": 300,
-            "EvaluationPeriods": 2,
-            "Threshold": 5.0,
-            "ComparisonOperator": "GreaterThanThreshold",
-            "StateTransitionedTimestamp": "2025-11-20T02:36:09.524000+00:00"
-        },
-        {
-            "AlarmName": "AnalyticsService-Throttles",
-            "AlarmArn": "arn:aws:cloudwatch:us-east-1:897347885635:alarm:AnalyticsService-Throttles",
-            "AlarmDescription": "High throttle rate in Analytics Lambda",
-            "AlarmConfigurationUpdatedTimestamp": "2025-11-17T06:01:19.567000+00:00",
-            "ActionsEnabled": true,
-            "OKActions": [],
-            "AlarmActions": [],
-            "InsufficientDataActions": [],
-            "StateValue": "OK",
-            "StateReason": "Threshold Crossed: 1 datapoint [0.0 (20/11/25 02:31:00)] was not greater than the threshold (10.0).",
-            "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2025-11-20T02:36:07.648+0000\",\"startDate\":\"2025-11-20T02:31:00.000+0000\",\"statistic\":\"Sum\",\"period\":300,\"recentDatapoints\":[0.0],\"threshold\":10.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2025-11-20T02:31:00.000+0000\",\"sampleCount\":1.0,\"value\":0.0}]}",
-            "StateUpdatedTimestamp": "2025-11-20T02:36:07.650000+00:00",
-            "MetricName": "Throttles",
-            "Namespace": "AWS/Lambda",
-            "Statistic": "Sum",
-            "Dimensions": [
-                {
-                    "Name": "FunctionName",
-                    "Value": "data-pipeline-advanced-analytics"
-                }
-            ],
-            "Period": 300,
-            "EvaluationPeriods": 1,
-            "Threshold": 10.0,
-            "ComparisonOperator": "GreaterThanThreshold",
-            "StateTransitionedTimestamp": "2025-11-20T02:36:07.650000+00:00"
-        }
-    ],
-    "CompositeAlarms": []
-}
+
+
